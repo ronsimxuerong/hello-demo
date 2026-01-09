@@ -108,7 +108,9 @@ shared/
 ## 🛠️ Development Setup
 
 ### Prerequisites
-- Node.js 18+ and npm/yarn
+- **Node.js 18+ and npm/yarn** - [Download Node.js](https://nodejs.org/)
+  - ⚠️ **Having issues?** See [Node.js Setup Guide](./docs/NODEJS_SETUP.md)
+  - Run setup check: `backend\SETUP_NODEJS.ps1` (PowerShell) or `backend\SETUP_NODEJS.bat` (CMD)
 - PostgreSQL 14+
 - Docker (optional)
 - Git

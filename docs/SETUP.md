@@ -7,6 +7,8 @@ This guide will help you set up the Tax Academy Singapore eLearning Platform for
 Before you begin, ensure you have the following installed:
 
 - **Node.js** (v18 or higher) - [Download](https://nodejs.org/)
+  - ⚠️ **If Node.js is not installed, see [NODEJS_SETUP.md](./NODEJS_SETUP.md) for detailed installation instructions**
+  - You can also run the setup check script: `backend\SETUP_NODEJS.ps1` or `backend\SETUP_NODEJS.bat`
 - **npm** or **yarn** - Comes with Node.js
 - **PostgreSQL** (v14 or higher) - [Download](https://www.postgresql.org/download/)
 - **Git** - [Download](https://git-scm.com/)
