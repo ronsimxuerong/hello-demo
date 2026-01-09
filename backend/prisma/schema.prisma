@@ -1,0 +1,258 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  PENDING
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum VideoAccessType {
+  FREE
+  SUBSCRIPTION
+  PAY_PER_VIEW
+  WEBINAR
+}
+
+enum WebinarStatus {
+  SCHEDULED
+  LIVE
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String
+  firstName     String?
+  lastName      String?
+  phone         String?
+  avatar        String?
+  role          UserRole  @default(USER)
+  emailVerified Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  subscriptions Subscription[]
+  payments      Payment[]
+  videoViews    VideoView[]
+  playlists     Playlist[]
+  webinarRegistrations WebinarRegistration[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  image       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  videos Video[]
+
+  @@map("categories")
+}
+
+model Video {
+  id              String          @id @default(uuid())
+  title           String
+  description     String?
+  thumbnail       String?
+  videoUrl        String          // CDN URL
+  duration        Int?            // in seconds
+  accessType      VideoAccessType @default(FREE)
+  price           Float?          // for pay-per-view
+  isPublished     Boolean         @default(false)
+  views           Int             @default(0)
+  categoryId      String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relations
+  category        Category?       @relation(fields: [categoryId], references: [id])
+  videoViews      VideoView[]
+  playlistItems   PlaylistItem[]
+
+  @@index([categoryId])
+  @@index([accessType])
+  @@index([isPublished])
+  @@map("videos")
+}
+
+model VideoView {
+  id        String   @id @default(uuid())
+  userId    String
+  videoId   String
+  watchedAt DateTime @default(now())
+  progress  Int      @default(0) // percentage watched
+
+  // Relations
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+  @@index([userId])
+  @@index([videoId])
+  @@map("video_views")
+}
+
+model SubscriptionPlan {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  price       Float
+  duration    Int      // in days (30 for monthly, 365 for annual)
+  features    String[] // JSON array of features
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  subscriptions Subscription[]
+
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id              String             @id @default(uuid())
+  userId          String
+  planId          String
+  status          SubscriptionStatus @default(PENDING)
+  startDate       DateTime
+  endDate         DateTime?
+  stripeSubscriptionId String?        @unique
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  // Relations
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan            SubscriptionPlan   @relation(fields: [planId], references: [id])
+  payments        Payment[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+  userId            String
+  subscriptionId    String?
+  videoId           String?       // for pay-per-view
+  amount            Float
+  currency          String        @default("SGD")
+  status            PaymentStatus @default(PENDING)
+  stripePaymentId   String?       @unique
+  stripeSessionId   String?
+  metadata          String?       // JSON string
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription      Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@map("payments")
+}
+
+model Webinar {
+  id          String         @id @default(uuid())
+  title       String
+  description String?
+  thumbnail   String?
+  videoUrl    String?        // for recorded webinars
+  scheduledAt DateTime
+  duration    Int?           // in minutes
+  status      WebinarStatus  @default(SCHEDULED)
+  maxAttendees Int?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Relations
+  registrations WebinarRegistration[]
+
+  @@index([scheduledAt])
+  @@index([status])
+  @@map("webinars")
+}
+
+model WebinarRegistration {
+  id        String   @id @default(uuid())
+  userId    String
+  webinarId String
+  registeredAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  webinar   Webinar  @relation(fields: [webinarId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, webinarId])
+  @@index([userId])
+  @@index([webinarId])
+  @@map("webinar_registrations")
+}
+
+model Playlist {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  userId      String
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       PlaylistItem[]
+
+  @@index([userId])
+  @@map("playlists")
+}
+
+model PlaylistItem {
+  id         String   @id @default(uuid())
+  playlistId String
+  videoId    String
+  order      Int
+  addedAt    DateTime @default(now())
+
+  // Relations
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  video      Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([playlistId, videoId])
+  @@index([playlistId])
+  @@map("playlist_items")
+}
